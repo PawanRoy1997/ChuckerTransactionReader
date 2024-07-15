@@ -32,6 +32,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -50,6 +53,16 @@ import java.io.FileOutputStream
 class MainActivity : ComponentActivity() {
 
     private lateinit var fileLauncher: ActivityResultLauncher<String>
+    private var transaction by mutableStateOf(
+        Transaction(
+            status = "200",
+            transactionName = "Transaction Name",
+            endPointName = "www.google.com",
+            time = "2 PM",
+            duration = "400ms",
+            size = "2mb"
+        )
+    )
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,7 +70,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             ChuckerReaderTheme {
 
-                MainScreen {
+                MainScreen(transaction) {
                     fileLauncher.launch("text/plain")
                 }
             }
@@ -79,6 +92,48 @@ class MainActivity : ComponentActivity() {
                     } catch (e: Exception) {
                         Log.d("File", "Something went wrong!! ${e.message}")
                     }
+
+                    var url = ""
+                    var method = ""
+                    var response = ""
+                    var requestTime = ""
+                    var duration = ""
+                    var size = ""
+                    file.forEachLine { line ->
+                        if(line.matches(Regex("/* .+"))){
+                            return@forEachLine
+                        }
+                        if (line.matches(Regex("^URL: .+"))) {
+                            url = line.substring(startIndex = 4).trim()
+                        }
+                        if(line.matches(Regex("^Method: .+"))) {
+                            method = line.substringAfter("Method: ").trim()
+                        }
+                        if(line.matches(Regex("^Response: .+"))) {
+                            response = line.substringAfter("Response: ").trim()
+                        }
+
+                        if(line.matches(Regex("^Request time: .+"))) {
+                            requestTime = line.substringAfter("Request time: ").trim()
+                        }
+                        if(line.matches(Regex("^Duration: .+"))) {
+                            duration = line.substringAfter("Duration: ").trim()
+                        }
+
+                        if(line.matches(Regex("^Total size: .+"))) {
+                            size = line.substringAfter("Total size: ").trim()
+                        }
+                    }
+
+
+                    transaction = Transaction(
+                        status = response,
+                        time = requestTime,
+                        size = size,
+                        endPointName = url,
+                        duration = duration,
+                        transactionName = method
+                    )
                 }
             }
         }
@@ -87,7 +142,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(getFile: () -> Unit = {}) {
+fun MainScreen(transaction: Transaction, getFile: () -> Unit = {}) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -122,20 +177,7 @@ fun MainScreen(getFile: () -> Unit = {}) {
                 .fillMaxSize(1f)
                 .padding(innerPadding)
         ) {
-
-            val transaction = Transaction(
-                status = "200",
-                transactionName = "Transaction Name",
-                endPointName = "www.google.com",
-                time = "2 PM",
-                duration = "400ms",
-                size = "2mb"
-            )
-            TransactionFile(transaction.copy(status = "100"))
-            TransactionFile(transaction.copy(status = "201"))
-            TransactionFile(transaction.copy(status = "300"))
-            TransactionFile(transaction.copy(status = "400"))
-            TransactionFile(transaction.copy(status = "500"))
+            TransactionFile(transaction)
         }
     }
 }
@@ -144,7 +186,16 @@ fun MainScreen(getFile: () -> Unit = {}) {
 @Composable
 fun MainScreenPreview() {
     ChuckerReaderTheme {
-        MainScreen()
+        MainScreen(
+            Transaction(
+                status = "200",
+                transactionName = "Transaction Name",
+                endPointName = "www.google.com",
+                time = "2 PM",
+                duration = "400ms",
+                size = "2mb"
+            )
+        )
     }
 }
 
@@ -152,7 +203,16 @@ fun MainScreenPreview() {
 @Composable
 fun MainScreenNightPreview() {
     ChuckerReaderTheme {
-        MainScreen()
+        MainScreen(
+            Transaction(
+                status = "200",
+                transactionName = "Transaction Name",
+                endPointName = "www.google.com",
+                time = "2 PM",
+                duration = "400ms",
+                size = "2mb"
+            )
+        )
     }
 }
 
