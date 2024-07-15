@@ -2,19 +2,19 @@ package com.nextxform.chuckerreader
 
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -41,15 +41,45 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextxform.chuckerreader.models.Transaction
 import com.nextxform.chuckerreader.ui.theme.ChuckerReaderTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var fileLauncher: ActivityResultLauncher<String>
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
             ChuckerReaderTheme {
 
-                MainScreen()
+                MainScreen {
+                    fileLauncher.launch("text/plain")
+                }
+            }
+        }
+
+        fileLauncher = registerForActivityResult(FilePickerContract()) { fileUri ->
+            if (fileUri == null) {
+                Toast.makeText(this, "Something went wrong", Toast.LENGTH_SHORT).show()
+            } else {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val file = File.createTempFile("Transactions", ".txt")
+                    file.deleteOnExit()
+                    try {
+                        contentResolver.openInputStream(fileUri).use { fileInputStream ->
+                            FileOutputStream(file).use { fileOutputStream ->
+                                fileInputStream?.copyTo(fileOutputStream)
+                            }
+                        }
+                    } catch (e: Exception) {
+                        Log.d("File", "Something went wrong!! ${e.message}")
+                    }
+                }
             }
         }
     }
@@ -57,7 +87,7 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(getFile: () -> Unit = {}) {
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -71,15 +101,18 @@ fun MainScreen() {
                 },
                 modifier = Modifier.background(Color.Gray),
                 actions = {
-                    IconButton(onClick = {  }) {
-                        Icon(imageVector = Icons.Filled.Delete, contentDescription = "Delete Records")
+                    IconButton(onClick = { }) {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = "Delete Records"
+                        )
                     }
                 }
             )
 
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { /*TODO*/ }) {
+            FloatingActionButton(onClick = { getFile.invoke() }) {
                 Icon(imageVector = Icons.Filled.Add, contentDescription = "Import")
             }
         }
@@ -147,7 +180,7 @@ fun TransactionFile(transaction: Transaction) {
             .padding(all = 8.dp)
             .fillMaxWidth(1f)
     ) {
-        val statusColor = when{
+        val statusColor = when {
             transaction.status.matches(Regex("1..")) -> Color.Gray
             transaction.status.matches(Regex("2..")) -> Color(0xFF4CAF50)
             transaction.status.matches(Regex("3..")) -> Color(0xFFFFC107)
