@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Chucker Reader</string>
+    <string name="title_activity_view_transaction">ViewTransactionActivity</string>
 </resources>

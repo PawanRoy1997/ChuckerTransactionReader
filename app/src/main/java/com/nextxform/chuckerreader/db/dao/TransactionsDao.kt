@@ -11,6 +11,9 @@ interface TransactionsDao {
     @Query("SELECT * FROM `transaction`")
     suspend fun getAllTransactions(): List<Transaction>
 
+    @Query("SELECT * FROM `transaction` WHERE uid IS :id")
+    suspend fun getTransaction(id: Int): Transaction
+
     @Insert
     suspend fun addAll(transactions: List<Transaction>)
 

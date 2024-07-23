@@ -8,23 +8,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
-import com.nextxform.chuckerreader.db.Database
+import com.nextxform.chuckerreader.db.TransactionDatabase
 import com.nextxform.chuckerreader.db.model.Transaction
-import com.nextxform.chuckerreader.models.Transaction as Trans
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 
 class MainViewModel : ViewModel() {
-    val transactions = ArrayList<Trans>()
-    private lateinit var database: Database
+    val transactions = ArrayList<Transaction>()
 
-    var showLoading by mutableStateOf(false)
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> get() = _isLoading
 
     fun parseTransactions(uri: Uri, context: Context) {
-        showLoading = true
+        _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             val file = File.createTempFile("Transactions", ".txt")
             file.deleteOnExit()
@@ -40,11 +41,9 @@ class MainViewModel : ViewModel() {
 
             var transaction = Transaction(0)
             var sb = StringBuilder()
-
-            val transactions = ArrayList<Transaction>()
-
+            transactions.clear()
             file.forEachLine { line ->
-                if (line.matches(Regex("/* .+")) || line.matches(Regex("=+"))) {
+                if (line.matches(Regex("^/\\*.+")) || line.trim().matches(Regex("=+"))) {
 
                     transaction.response = sb.toString()
 
@@ -53,6 +52,8 @@ class MainViewModel : ViewModel() {
                     }
 
                     transaction = Transaction(0)
+                    sb = StringBuilder()
+                    return@forEachLine
                 }
                 if (line.matches(Regex("^URL: .+"))) {
                     transaction.endPointName = line.substring(startIndex = 4).trim()
@@ -63,64 +64,52 @@ class MainViewModel : ViewModel() {
                 if (line.matches(Regex("^Response: .+"))) {
                     transaction.status = line.substringAfter("Response: ").trim()
                 }
-
                 if (line.matches(Regex("^Request time: .+"))) {
                     transaction.time = line.substringAfter("Request time: ").trim()
                 }
                 if (line.matches(Regex("^Duration: .+"))) {
                     transaction.duration = line.substringAfter("Duration: ").trim()
                 }
-
                 if (line.matches(Regex("^Total size: .+"))) {
                     transaction.size = line.substringAfter("Total size: ").trim()
                 }
-
+                if (line.matches(Regex("---------- Request ----------"))) {
+                    return@forEachLine
+                }
                 if (line.matches(Regex("---------- Response ----------"))) {
                     transaction.request = sb.toString()
                     sb = StringBuilder()
                 } else {
-                    sb.append(line)
+                    if (line.trim().isNotEmpty()) sb.append(line).append("\n")
                 }
             }
 
-            database.transactionsDao().addAll(transactions)
-            showLoading = false
+            transactions.forEach {
+                Log.d("Trans", it.uid.toString())
+            }
+            TransactionDatabase.database.transactionsDao().addAll(transactions)
+            _isLoading.value = false
         }
     }
 
     fun getAllTransactions() {
-        viewModelScope.launch {
-            showLoading = true
-            database.transactionsDao().getAllTransactions().forEach { t ->
-                transactions.add(
-                    Trans(
-                        t.status.orEmpty(),
-                        t.transactionName.orEmpty(),
-                        t.endPointName.orEmpty(),
-                        t.time.orEmpty(),
-                        t.duration.orEmpty(),
-                        t.size.orEmpty()
-                    )
-                )
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoading.value = true
+            val elements = TransactionDatabase.database.transactionsDao().getAllTransactions()
+            transactions.addAll(elements)
+            elements.forEach {
+                Log.d("Trans", it.uid.toString())
             }
-            showLoading = false
+            _isLoading.value = false
         }
-    }
-
-    fun createDatabase(context: Context) {
-        database = Room.databaseBuilder(
-            context.applicationContext,
-            Database::class.java,
-            "transaction-database"
-        ).build()
     }
 
     fun delete() {
         viewModelScope.launch {
-            showLoading = true
-            database.transactionsDao().deleteAll()
+            _isLoading.value = true
+            TransactionDatabase.database.transactionsDao().deleteAll()
             transactions.clear()
-            showLoading = false
+            _isLoading.value = false
         }
     }
 }

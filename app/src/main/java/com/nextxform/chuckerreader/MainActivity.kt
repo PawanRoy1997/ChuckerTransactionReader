@@ -1,5 +1,6 @@
 package com.nextxform.chuckerreader
 
+import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
 import android.widget.Toast
@@ -8,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.viewModels
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +38,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,7 +48,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.nextxform.chuckerreader.models.Transaction
+import com.nextxform.chuckerreader.db.model.Transaction
 import com.nextxform.chuckerreader.ui.theme.ChuckerReaderTheme
 import com.nextxform.chuckerreader.viewModels.MainViewModel
 
@@ -75,7 +80,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        viewModel.createDatabase(this)
         viewModel.getAllTransactions()
     }
 
@@ -111,17 +115,35 @@ class MainActivity : ComponentActivity() {
                 }
             }
         ) { innerPadding ->
-            LazyColumn(
-                Modifier
-                    .fillMaxSize(1f)
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
                     .padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (viewModel.showLoading) {
-                    item { CircularProgressIndicator(Modifier.size(50.dp)) }
+                val loading by viewModel.isLoading.collectAsState()
+                if (loading) {
+                    CircularProgressIndicator()
                 } else {
-                    viewModel.transactions.forEach { trans ->
-                        item { TransactionFile(transaction = trans) }
+                    LazyColumn(
+                        Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        viewModel.transactions.forEach { trans ->
+                            item {
+                                TransactionFile(transaction = trans) { id ->
+                                    startActivity(
+                                        Intent(
+                                            this@MainActivity,
+                                            ViewTransactionActivity::class.java
+                                        ).apply {
+                                            putExtra("transactionId", id)
+                                        })
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -162,29 +184,30 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun TransactionFile(transaction: Transaction) {
+    fun TransactionFile(transaction: Transaction, onClick: (Int) -> Unit = {}) {
         Row(
             Modifier
                 .padding(all = 8.dp)
                 .fillMaxWidth(1f)
-                .height(60.dp),
+                .height(60.dp)
+                .clickable { onClick(transaction.uid) },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val statusColor = when {
-                transaction.status.matches(Regex("1..")) -> Color.Gray
-                transaction.status.matches(Regex("2..")) -> Color(0xFF4CAF50)
-                transaction.status.matches(Regex("3..")) -> Color(0xFFFFC107)
-                transaction.status.matches(Regex("4..")) -> Color(0xFFE91E63)
-                transaction.status.matches(Regex("5..")) -> Color(0xFF673AB7)
+                transaction.status.orEmpty().matches(Regex("1..")) -> Color.Gray
+                transaction.status.orEmpty().matches(Regex("2..")) -> Color(0xFF4CAF50)
+                transaction.status.orEmpty().matches(Regex("3..")) -> Color(0xFFFFC107)
+                transaction.status.orEmpty().matches(Regex("4..")) -> Color(0xFFE91E63)
+                transaction.status.orEmpty().matches(Regex("5..")) -> Color(0xFF673AB7)
                 else -> Color.DarkGray
             }
 
             val requestColor = when {
-                transaction.transactionName.matches(Regex("PUT")) -> Color.Gray
-                transaction.transactionName.matches(Regex("GET")) -> Color.White
-                transaction.transactionName.matches(Regex("POST")) -> Color(0xFFFFC107)
-                transaction.transactionName.matches(Regex("DELETE")) -> Color(0xFFE91E63)
-                transaction.transactionName.matches(Regex("PATCH")) -> Color(0xFF673AB7)
+                transaction.transactionName.orEmpty().matches(Regex("PUT")) -> Color.Gray
+                transaction.transactionName.orEmpty().matches(Regex("GET")) -> Color.White
+                transaction.transactionName.orEmpty().matches(Regex("POST")) -> Color(0xFFFFC107)
+                transaction.transactionName.orEmpty().matches(Regex("DELETE")) -> Color(0xFFE91E63)
+                transaction.transactionName.orEmpty().matches(Regex("PATCH")) -> Color(0xFF673AB7)
                 else -> Color.DarkGray
             }
 
@@ -199,7 +222,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Column {
                     Text(
-                        text = transaction.status,
+                        text = transaction.status.orEmpty(),
                         color = Color.White,
                         style = MaterialTheme.typography.titleSmall,
                         textAlign = TextAlign.Center,
@@ -208,7 +231,7 @@ class MainActivity : ComponentActivity() {
 
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = transaction.transactionName,
+                        text = transaction.transactionName.orEmpty(),
                         style = MaterialTheme.typography.titleSmall,
                         textAlign = TextAlign.Center,
                         color = requestColor,
@@ -232,16 +255,25 @@ class MainActivity : ComponentActivity() {
                     )
 
                     Text(
-                        text = transaction.endPointName,
+                        text = transaction.endPointName.orEmpty(),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }
                 Spacer(modifier = Modifier.width(16.dp))
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(text = transaction.time, style = MaterialTheme.typography.bodySmall)
-                    Text(text = transaction.duration, style = MaterialTheme.typography.bodySmall)
-                    Text(text = transaction.size, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        text = transaction.time.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = transaction.duration.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = transaction.size.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
