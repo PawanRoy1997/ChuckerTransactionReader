@@ -124,15 +124,12 @@ class ViewTransactionActivity : ComponentActivity() {
             }
             HorizontalPager(state = pagerState) { page: Int ->
                 LazyColumn(
-                    Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
+                    Modifier.fillMaxSize()
                 ) {
                     if (page == 0) {
                         item {
                             Text(
                                 text = request,
-                                modifier = modifier,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
@@ -140,7 +137,6 @@ class ViewTransactionActivity : ComponentActivity() {
                         item {
                             Text(
                                 text = response,
-                                modifier = modifier,
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
