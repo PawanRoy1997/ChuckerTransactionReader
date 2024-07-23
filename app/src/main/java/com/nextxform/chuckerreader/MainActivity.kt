@@ -124,6 +124,17 @@ class MainActivity : ComponentActivity() {
                 val loading by viewModel.isLoading.collectAsState()
                 if (loading) {
                     CircularProgressIndicator()
+                } else if (viewModel.transactions.isEmpty()) {
+                    Column(
+                        Modifier.fillMaxSize(1f),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            "Tap on '+' button to add transactions",
+                            style = MaterialTheme.typography.titleSmall
+                        )
+                    }
                 } else {
                     LazyColumn(
                         Modifier
@@ -140,7 +151,8 @@ class MainActivity : ComponentActivity() {
                                             ViewTransactionActivity::class.java
                                         ).apply {
                                             putExtra("transactionId", id)
-                                        })
+                                        }
+                                    )
                                 }
                             }
                         }
