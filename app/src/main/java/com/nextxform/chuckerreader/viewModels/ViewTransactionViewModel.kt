@@ -9,7 +9,7 @@ import com.nextxform.chuckerreader.db.TransactionDatabase
 import com.nextxform.chuckerreader.db.model.Transaction
 import kotlinx.coroutines.launch
 
-class ViewPermitViewModel: ViewModel() {
+class ViewTransactionViewModel: ViewModel() {
     var transactionId: Int = 0
     var transaction by mutableStateOf(Transaction())
 

@@ -26,11 +26,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -39,11 +35,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nextxform.chuckerreader.ui.theme.ChuckerReaderTheme
-import com.nextxform.chuckerreader.viewModels.ViewPermitViewModel
+import com.nextxform.chuckerreader.viewModels.ViewTransactionViewModel
 import kotlinx.coroutines.launch
 
 class ViewTransactionActivity : ComponentActivity() {
-    private val viewModel: ViewPermitViewModel by viewModels()
+    private val viewModel: ViewTransactionViewModel by viewModels()
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,10 +70,9 @@ class ViewTransactionActivity : ComponentActivity() {
                     }
                 ) { innerPadding ->
                     Greeting(
-                        name = viewModel.transaction.endPointName.orEmpty(),
+                        modifier = Modifier.padding(innerPadding),
                         request = viewModel.transaction.request.orEmpty(),
-                        response = viewModel.transaction.response.orEmpty(),
-                        modifier = Modifier.padding(innerPadding)
+                        response = viewModel.transaction.response.orEmpty()
                     )
                 }
             }
@@ -94,7 +89,6 @@ class ViewTransactionActivity : ComponentActivity() {
     @Composable
     fun Greeting(
         modifier: Modifier = Modifier,
-        name: String = "",
         request: String = "",
         response: String = ""
     ) {
@@ -150,7 +144,7 @@ class ViewTransactionActivity : ComponentActivity() {
     @Composable
     fun GreetingPreview() {
         ChuckerReaderTheme {
-            Greeting(name = "Android")
+            Greeting()
         }
     }
 }

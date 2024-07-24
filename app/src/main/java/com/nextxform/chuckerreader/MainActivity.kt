@@ -3,6 +3,7 @@ package com.nextxform.chuckerreader
 import android.content.Intent
 import android.content.res.Configuration
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -38,9 +39,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -56,16 +58,14 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var fileLauncher: ActivityResultLauncher<String>
     private val viewModel: MainViewModel by viewModels()
+    private var setLoading: (Boolean) -> Unit = {}
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
             ChuckerReaderTheme {
-
-                MainScreen {
-                    fileLauncher.launch("text/plain")
-                }
+                MainScreen(getFile = { fileLauncher.launch("text/plain") })
             }
         }
 
@@ -73,14 +73,14 @@ class MainActivity : ComponentActivity() {
             if (fileUri == null) {
                 Toast.makeText(this, "Something went wrong", Toast.LENGTH_SHORT).show()
             } else {
-                viewModel.parseTransactions(fileUri, this)
+                viewModel.parseTransactions(fileUri, this, setLoading)
             }
         }
     }
 
     override fun onStart() {
         super.onStart()
-        viewModel.getAllTransactions()
+        viewModel.getAllTransactions(setLoading)
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +99,7 @@ class MainActivity : ComponentActivity() {
                     },
                     modifier = Modifier.background(Color.Gray),
                     actions = {
-                        IconButton(onClick = { viewModel.delete() }) {
+                        IconButton(onClick = { viewModel.delete(setLoading) }) {
                             Icon(
                                 imageVector = Icons.Filled.Delete,
                                 contentDescription = "Delete Records"
@@ -121,7 +121,10 @@ class MainActivity : ComponentActivity() {
                     .padding(innerPadding),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                val loading by viewModel.isLoading.collectAsState()
+                var loading by remember { mutableStateOf(false) }
+                Log.d("Trans", "Loading: $loading")
+                setLoading = { loading = it }
+
                 if (loading) {
                     CircularProgressIndicator()
                 } else if (viewModel.transactions.isEmpty()) {
