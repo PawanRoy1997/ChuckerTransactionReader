@@ -14,21 +14,25 @@
         android:theme="@style/Theme.ChuckerReader"
         tools:targetApi="31">
         <activity
-            android:name=".ViewTransactionActivity"
-            android:exported="false"
-            android:label="@string/title_activity_view_transaction"
-            android:theme="@style/Theme.ChuckerReader" />
-        <activity
-            android:name=".MainActivity"
+            android:name=".SplashScreenActivity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.ChuckerReader">
+            android:label="@string/title_activity_splash_screen"
+            android:theme="@style/Theme.ChuckerReader" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".ViewTransactionActivity"
+            android:exported="false"
+            android:label="@string/title_activity_view_transaction"
+            android:theme="@style/Theme.ChuckerReader" />
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:theme="@style/Theme.ChuckerReader"/>
     </application>
 
 </manifest>
